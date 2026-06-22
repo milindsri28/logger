@@ -1,0 +1,11 @@
+{
+  "name": "ai-debug-investigator",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "setup": "docker compose up -d && cd backend && npm install && npm run migrate && cd ../frontend && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "echo Run dev:backend and dev:frontend in separate terminals"
+  }
+}

@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 13% 10%;
+    --foreground: 220 9% 92%;
+    --card: 220 13% 13%;
+    --card-foreground: 220 9% 92%;
+    --popover: 220 13% 13%;
+    --popover-foreground: 220 9% 92%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 10% 18%;
+    --secondary-foreground: 220 9% 92%;
+    --muted: 220 10% 18%;
+    --muted-foreground: 220 5% 58%;
+    --accent: 220 10% 20%;
+    --accent-foreground: 220 9% 92%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 10% 20%;
+    --input: 220 10% 20%;
+    --ring: 239 84% 67%;
+    --radius: 0.5rem;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    @apply antialiased;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  html,
+  body,
+  #__next {
+    height: 100%;
+  }
+
+  /* react-resizable-panels v4 */
+  [data-group] {
+    height: 100%;
+    width: 100%;
+  }
+
+  [data-panel] {
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+    isolation: isolate;
+    contain: layout paint;
+  }
+
+  [data-separator] {
+    flex-shrink: 0;
+    touch-action: none;
+    user-select: none;
+    position: relative;
+    z-index: 1000;
+    pointer-events: auto;
+  }
+
+  [role='separator'][aria-orientation='vertical'] {
+    width: 10px;
+    min-width: 10px;
+    cursor: col-resize;
+  }
+
+  [role='separator'][aria-orientation='horizontal'] {
+    height: 10px;
+    min-height: 10px;
+    cursor: row-resize;
+  }
+
+  /* Monaco overflows its panel and steals pointer events from resize handles */
+  [data-panel] .monaco-editor,
+  [data-panel] .monaco-editor .overflow-guard,
+  [data-panel] .monaco-editor-background {
+    max-width: 100% !important;
+  }
+
+  [data-panel] > div {
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+}
