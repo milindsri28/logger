@@ -22,7 +22,6 @@ app.use(express.json({ limit: '2mb' }));
 app.use(requestLogger);
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
-const analyzeLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10 });
 const chatLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 30 });
 
 app.get('/api/health', async (_req, res) => {
@@ -48,7 +47,7 @@ app.use('/api/github', githubRoutes);
 app.use('/api/vps', vpsRoutes);
 app.use('/api/repo', repoRoutes);
 app.use('/api/chat', chatLimiter, chatRoutes);
-app.use('/api/incidents', analyzeLimiter, incidentRoutes);
+app.use('/api/incidents', incidentRoutes);
 app.use('/api/repository', repositoryRoutes);
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

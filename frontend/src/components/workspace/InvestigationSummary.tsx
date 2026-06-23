@@ -13,6 +13,7 @@ interface InvestigationSummaryProps {
   incidentId?: string | null;
   isAnalyzing?: boolean;
   analyzeStep?: string;
+  analyzeError?: string;
 }
 
 function ConfidenceRing({ score }: { score: number }) {
@@ -46,6 +47,7 @@ export function InvestigationSummary({
   incidentId,
   isAnalyzing,
   analyzeStep,
+  analyzeError,
 }: InvestigationSummaryProps) {
   if (isAnalyzing) {
     return (
@@ -65,9 +67,13 @@ export function InvestigationSummary({
     return (
       <Card className="border-border/60 bg-card/30">
         <CardContent className="p-4">
-          <p className="text-[12px] text-muted-foreground">
-            Run an investigation to see root cause analysis, evidence, and recommended next steps.
-          </p>
+          {analyzeError ? (
+            <p className="text-[12px] text-destructive">{analyzeError}</p>
+          ) : (
+            <p className="text-[12px] text-muted-foreground">
+              Run an investigation to see root cause analysis, evidence, and recommended next steps.
+            </p>
+          )}
         </CardContent>
       </Card>
     );

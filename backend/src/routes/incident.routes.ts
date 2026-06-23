@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { validateBody } from '../middleware/validate';
@@ -14,6 +15,14 @@ import { sendError } from '../utils/api-error';
 const router = Router();
 router.use(authMiddleware);
 
+const analyzeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'RATE_LIMITED', message: 'Too many investigations. Try again in an hour.' },
+});
+
 const analyzeSchema = z.object({
   repositoryId: z.string().uuid(),
   vpsConnectionId: z.string().uuid(),
@@ -23,7 +32,7 @@ const analyzeSchema = z.object({
   lines: z.number().int().min(50).max(5000).optional(),
 });
 
-router.post('/analyze', validateBody(analyzeSchema), async (req: AuthRequest, res: Response) => {
+router.post('/analyze', analyzeLimiter, validateBody(analyzeSchema), async (req: AuthRequest, res: Response) => {
   try {
     const incident = await createAndAnalyzeIncident(req.user!.userId, req.body);
     res.status(202).json({

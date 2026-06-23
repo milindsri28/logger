@@ -18,6 +18,7 @@ interface ChatPanelProps {
   incidentId?: string | null;
   isAnalyzing?: boolean;
   analyzeStep?: string;
+  analyzeError?: string;
   headerActions?: React.ReactNode;
 }
 
@@ -43,6 +44,7 @@ export function ChatPanel({
   incidentId,
   isAnalyzing,
   analyzeStep,
+  analyzeError,
   headerActions,
 }: ChatPanelProps) {
   const [input, setInput] = useState('');
@@ -146,6 +148,7 @@ export function ChatPanel({
             incidentId={incidentId}
             isAnalyzing={isAnalyzing}
             analyzeStep={analyzeStep}
+            analyzeError={analyzeError}
           />
 
           {messages.map((msg) =>

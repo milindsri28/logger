@@ -30,7 +30,11 @@ export async function api<T>(
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new Error(data.message || data.error || `Request failed: ${res.status}`);
+    const fallback =
+      res.status === 429
+        ? 'Too many requests. Please wait and try again.'
+        : `Request failed: ${res.status}`;
+    throw new Error(data.message || data.error || fallback);
   }
   return data as T;
 }

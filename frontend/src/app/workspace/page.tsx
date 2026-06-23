@@ -39,6 +39,7 @@ export default function WorkspacePage() {
   const analyzeMutation = useAnalyzeMutation();
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeStep, setAnalyzeStep] = useState('');
+  const [analyzeError, setAnalyzeError] = useState('');
   const [activeIncidentId, setActiveIncidentId] = useState<string | null>(null);
   const [investigationReport, setInvestigationReport] = useState<InvestigationReport | null>(null);
 
@@ -155,6 +156,7 @@ export default function WorkspacePage() {
     if (!repositoryId || !vpsConnectionId || !selectedService) return;
     setAnalyzing(true);
     setAnalyzeStep('Starting…');
+    setAnalyzeError('');
     setInvestigationReport(null);
     try {
       const result = await analyzeMutation.mutateAsync({
@@ -182,14 +184,16 @@ export default function WorkspacePage() {
         if (status.status === 'failed') {
           setAnalyzing(false);
           setAnalyzeStep('');
+          setAnalyzeError('Investigation failed. Check backend logs or try again.');
           return;
         }
         setTimeout(poll, 2000);
       };
       await poll();
-    } catch {
+    } catch (err) {
       setAnalyzing(false);
       setAnalyzeStep('');
+      setAnalyzeError(err instanceof Error ? err.message : 'Investigation failed to start');
     }
   }
 
@@ -404,6 +408,7 @@ export default function WorkspacePage() {
                   incidentId={activeIncidentId}
                   isAnalyzing={analyzing}
                   analyzeStep={analyzeStep}
+                  analyzeError={analyzeError}
                   headerActions={
                     <PanelCollapseButton
                       direction="right"
