@@ -71,3 +71,42 @@ export interface DashboardContext {
   selectedFilePath: string | null;
   selectedService: string | null;
 }
+
+export interface ProjectInfo {
+  framework: string;
+  language: string;
+  packageManager: string;
+}
+
+export interface ApiEndpoint {
+  method: string;
+  path: string;
+  file: string;
+}
+
+export interface RepositoryStats {
+  totalFiles: number;
+  totalFolders: number;
+  totalApis: number;
+  totalServices: number;
+  totalCommits: number;
+}
+
+export interface ScanCommit {
+  message: string;
+  author: string;
+  timestamp: string;
+  hash: string;
+}
+
+export interface HotFile {
+  path: string;
+  commitCount: number;
+}
+
+export interface ScanStatus {
+  branch: string;
+  status: string;
+  scannedAt: string | null;
+  errorMessage: string | null;
+}

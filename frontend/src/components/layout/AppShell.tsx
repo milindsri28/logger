@@ -17,6 +17,7 @@ import {
   Loader2,
   FolderGit2,
   ScrollText,
+  Radar,
 } from 'lucide-react';
 import { clearToken } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +44,7 @@ interface AppShellProps {
 const navItems = [
   { href: '/workspace', label: 'Workspace', icon: LayoutDashboard },
   { href: '/repo', label: 'Repository', icon: FolderGit2 },
+  { href: '/intelligence', label: 'Repository Intelligence', icon: Radar },
   { href: '/logger', label: 'Logger', icon: ScrollText },
   { href: '/account?tab=history', label: 'Incidents', icon: AlertCircle },
   { href: '/account?tab=github', label: 'Integrations', icon: Plug },
@@ -78,6 +80,7 @@ export function AppShell({
   function isNavActive(href: string) {
     if (href === '/workspace') return pathname === '/workspace';
     if (href === '/repo') return pathname === '/repo';
+    if (href === '/intelligence') return pathname === '/intelligence';
     if (href === '/logger') return pathname === '/logger';
     if (href.includes('tab=history')) {
       return pathname.startsWith('/incidents') || pathname.includes('history');

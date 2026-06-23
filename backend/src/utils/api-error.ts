@@ -3,6 +3,7 @@ import { Response } from 'express';
 export type ApiErrorCode =
   | 'REPO_NOT_READY'
   | 'REPO_NOT_FOUND'
+  | 'SCAN_NOT_FOUND'
   | 'VPS_NOT_FOUND'
   | 'SETUP_INCOMPLETE'
   | 'ANALYSIS_FAILED'

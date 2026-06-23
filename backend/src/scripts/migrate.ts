@@ -5,7 +5,7 @@ import { Pool } from 'pg';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
-const MIGRATIONS = ['001_initial.sql', '002_mvp.sql'];
+const MIGRATIONS = ['001_initial.sql', '002_mvp.sql', '003_repository_intelligence.sql'];
 
 async function migrate() {
   const databaseUrl =
