@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+frontend/.next
+.git
+.gitignore
+**/*.md
+.env
+.env.*
+!.env.example
+frontend
+**/.DS_Store
+**/dist
+**/*.log

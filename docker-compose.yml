@@ -2,15 +2,61 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: ai-debug-postgres
+    restart: always
     environment:
       POSTGRES_USER: aidebug
       POSTGRES_PASSWORD: aidebug_secret
       POSTGRES_DB: ai_debug
     ports:
-      - "5435:5432"  # 5435 avoids conflict with local PostgreSQL 13 (5433) and 18 (5434) on Windows
+      - "5435:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/migrations/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aidebug -d ai_debug"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: ai-debug-backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      BACKEND_PORT: 4000
+      DATABASE_URL: postgresql://aidebug:aidebug_secret@postgres:5432/ai_debug
+      REPOS_DATA_DIR: /app/data/repos
+    volumes:
+      - repos_data:/app/data/repos
+
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    container_name: ai-debug-worker
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://aidebug:aidebug_secret@postgres:5432/ai_debug
 
 volumes:
   postgres_data:
+  repos_data:
