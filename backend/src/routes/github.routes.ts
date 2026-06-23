@@ -9,6 +9,11 @@ import {
   deleteRepository,
   syncRepository,
   connectGitHub,
+  getRecentCommits,
+  getRelevantFiles,
+  listBranches,
+  getCurrentBranch,
+  checkoutBranch,
 } from '../services/github.service';
 import { sendError } from '../utils/api-error';
 
@@ -107,6 +112,76 @@ router.post('/repositories/:id/sync', async (req: AuthRequest, res: Response) =>
     res.json({ message: 'Sync started', repository: { id: repo.id, cloneStatus: repo.clone_status } });
   } catch (err) {
     sendError(res, err, 'Sync failed');
+  }
+});
+
+const checkoutSchema = z.object({
+  branch: z.string().min(1).max(200),
+});
+
+router.get('/repositories/:id/branches', async (req: AuthRequest, res: Response) => {
+  try {
+    const repo = await getRepository(req.user!.userId, String(req.params.id));
+    if (!repo) {
+      res.status(404).json({ error: 'REPO_NOT_FOUND', message: 'Repository not found' });
+      return;
+    }
+    const [branches, currentBranch] = await Promise.all([
+      listBranches(repo),
+      getCurrentBranch(repo),
+    ]);
+    res.json({ branches, currentBranch, defaultBranch: repo.default_branch });
+  } catch (err) {
+    sendError(res, err, 'Failed to list branches');
+  }
+});
+
+router.post('/repositories/:id/checkout', validateBody(checkoutSchema), async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await checkoutBranch(req.user!.userId, String(req.params.id), req.body.branch);
+    res.json({ message: 'Branch switched', ...result });
+  } catch (err) {
+    sendError(res, err, 'Failed to switch branch');
+  }
+});
+
+router.get('/repositories/:id/commits', async (req: AuthRequest, res: Response) => {
+  try {
+    const repo = await getRepository(req.user!.userId, String(req.params.id));
+    if (!repo) {
+      res.status(404).json({ error: 'REPO_NOT_FOUND', message: 'Repository not found' });
+      return;
+    }
+    const limit = Math.min(parseInt(String(req.query.limit || '20'), 10), 50);
+    const commits = await getRecentCommits(repo, limit);
+    res.json({
+      commits: commits.map((c) => ({
+        sha: c.sha,
+        fullSha: c.fullSha,
+        message: c.message,
+        author: c.author,
+        date: c.date,
+        url: c.url || `https://github.com/${repo.owner}/${repo.name}/commit/${c.fullSha || c.sha}`,
+      })),
+      repository: { owner: repo.owner, name: repo.name },
+    });
+  } catch (err) {
+    sendError(res, err, 'Failed to fetch commits');
+  }
+});
+
+router.get('/repositories/:id/relevant-files', async (req: AuthRequest, res: Response) => {
+  try {
+    const repo = await getRepository(req.user!.userId, String(req.params.id));
+    if (!repo) {
+      res.status(404).json({ error: 'REPO_NOT_FOUND', message: 'Repository not found' });
+      return;
+    }
+    const limit = Math.min(parseInt(String(req.query.limit || '15'), 10), 50);
+    const files = await getRelevantFiles(repo, limit);
+    res.json({ files });
+  } catch (err) {
+    sendError(res, err, 'Failed to fetch relevant files');
   }
 });
 

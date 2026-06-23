@@ -2,6 +2,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import type { ChatMode } from '@/types';
 
 interface ChatInput {
   repositoryId: string;
@@ -9,6 +10,7 @@ interface ChatInput {
   serviceName: string;
   selectedFile?: string | null;
   message: string;
+  mode?: ChatMode;
 }
 
 interface ChatResponse {

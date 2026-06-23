@@ -9,7 +9,7 @@ const MIGRATIONS = ['001_initial.sql', '002_mvp.sql'];
 
 async function migrate() {
   const databaseUrl =
-    process.env.DATABASE_URL || 'postgresql://aidebug:aidebug_secret@localhost:5433/ai_debug';
+    process.env.DATABASE_URL || 'postgresql://aidebug:aidebug_secret@localhost:5435/ai_debug';
 
   const pool = new Pool({ connectionString: databaseUrl });
 

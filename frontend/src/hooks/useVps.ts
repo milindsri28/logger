@@ -14,13 +14,14 @@ export function useVpsServices(vpsConnectionId: string | null) {
 export function useVpsLogs(
   vpsConnectionId: string | null,
   service: string | null,
-  autoRefresh: boolean
+  autoRefresh: boolean,
+  lines = 500
 ) {
   return useQuery({
-    queryKey: ['vps-logs', vpsConnectionId, service],
+    queryKey: ['vps-logs', vpsConnectionId, service, lines],
     queryFn: () =>
       api<{ logs: string; fetchedAt: string }>(
-        `/vps/logs?vpsConnectionId=${vpsConnectionId}&service=${encodeURIComponent(service!)}`
+        `/vps/logs?vpsConnectionId=${vpsConnectionId}&service=${encodeURIComponent(service!)}&lines=${lines}`
       ),
     enabled: !!vpsConnectionId && !!service,
     refetchInterval: autoRefresh ? 5_000 : false,

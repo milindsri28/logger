@@ -31,48 +31,53 @@ export function RepoPanel({
   fileLoading,
 }: RepoPanelProps) {
   return (
-    <div className="flex h-full min-w-0 flex-col overflow-hidden bg-[#1a1a1a]">
+    <div className="flex h-full min-w-0 flex-col overflow-hidden bg-card">
       <PanelHeader icon={FolderTree} title="Repository" subtitle={repoName || 'Select repo'} />
       <div className="min-h-0 flex-1">
         <PanelContent>
-        <Group id="repo-split" orientation="vertical" className="h-full w-full min-w-0" resizeTargetMinimumSize={{ coarse: 36, fine: 16 }}>
-          <Panel id="repo-tree" defaultSize={40} minSize={20}>
-            <PanelContent>
-              <FileTree
-                tree={tree}
-                isLoading={treeLoading}
-                isError={treeError}
-                selectedPath={selectedFile}
-                onSelectFile={onSelectFile}
-                hideHeader
-              />
-            </PanelContent>
-          </Panel>
-          <ResizeHandle direction="vertical" />
-          <Panel id="repo-editor" defaultSize={60} minSize={25}>
-            <PanelContent>
-              <div className="flex h-full flex-col bg-[#1e1e1e]">
-                <div className="flex shrink-0 items-center gap-2 border-b border-border/40 px-3 py-1.5">
-                  <FileCode2 className="size-3.5 text-muted-foreground" />
-                  <span className="truncate text-xs text-muted-foreground">
-                    {selectedFile || 'No file selected'}
-                  </span>
+          <Group
+            id="repo-split"
+            orientation="vertical"
+            className="h-full w-full min-w-0"
+            resizeTargetMinimumSize={{ coarse: 36, fine: 16 }}
+          >
+            <Panel id="repo-tree" defaultSize={40} minSize={20}>
+              <PanelContent>
+                <FileTree
+                  tree={tree}
+                  isLoading={treeLoading}
+                  isError={treeError}
+                  selectedPath={selectedFile}
+                  onSelectFile={onSelectFile}
+                  hideHeader
+                />
+              </PanelContent>
+            </Panel>
+            <ResizeHandle id="sep-tree-editor" groupOrientation="vertical" />
+            <Panel id="repo-editor" defaultSize={60} minSize={25}>
+              <PanelContent>
+                <div className="flex h-full flex-col bg-background">
+                  <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-1.5">
+                    <FileCode2 className="size-3 text-muted-foreground/60" />
+                    <span className="truncate font-mono-code text-[11px] text-muted-foreground">
+                      {selectedFile || 'No file selected'}
+                    </span>
+                  </div>
+                  <div className="relative isolate z-0 min-h-0 min-w-0 flex-1 overflow-hidden">
+                    {!selectedFile && (
+                      <div className="flex h-full items-center justify-center p-4 text-center text-[12px] text-muted-foreground">
+                        Select a file to view its source
+                      </div>
+                    )}
+                    {selectedFile && fileLoading && <Skeleton className="h-full w-full rounded-none" />}
+                    {selectedFile && !fileLoading && fileContent !== undefined && (
+                      <CodeEditor value={fileContent} path={selectedFile} />
+                    )}
+                  </div>
                 </div>
-                <div className="relative isolate z-0 min-h-0 min-w-0 flex-1 overflow-hidden">
-                  {!selectedFile && (
-                    <div className="flex h-full items-center justify-center p-4 text-center text-xs text-muted-foreground">
-                      Select a file from the tree above
-                    </div>
-                  )}
-                  {selectedFile && fileLoading && <Skeleton className="h-full w-full rounded-none" />}
-                  {selectedFile && !fileLoading && fileContent !== undefined && (
-                    <CodeEditor value={fileContent} path={selectedFile} />
-                  )}
-                </div>
-              </div>
-            </PanelContent>
-          </Panel>
-        </Group>
+              </PanelContent>
+            </Panel>
+          </Group>
         </PanelContent>
       </div>
     </div>

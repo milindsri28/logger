@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-NetTCPConnection *)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :5433)",
+      "Bash(docker exec ai-debug-postgres *)",
+      "PowerShell(Get-Process *)",
+      "Bash(findstr :5434)",
+      "Bash(docker compose *)",
+      "Bash(npm run *)",
+      "Bash(findstr :4000)",
+      "Bash(findstr :3000)",
+      "Bash(findstr \":4000 \")",
+      "Bash(findstr LISTENING)",
+      "PowerShell(Stop-Process *)",
+      "Bash(curl -sS -i http://localhost:4000/api/health)",
+      "Bash(curl -sS -i -X OPTIONS http://localhost:4000/api/auth/register -H \"Origin: http://localhost:3000\" -H \"Access-Control-Request-Method: POST\" -H \"Access-Control-Request-Headers: content-type\")",
+      "Bash(curl -sS -i -X POST http://localhost:4000/api/auth/register -H \"Origin: http://localhost:3000\" -H \"Content-Type: application/json\" -d \"{\\\\\"name\\\\\":\\\\\"probe\\\\\",\\\\\"email\\\\\":\\\\\"probe@probe.com\\\\\",\\\\\"password\\\\\":\\\\\"probepass\\\\\"}\")",
+      "Bash(findstr \":3000 \")",
+      "Bash(curl -sS -i http://localhost:3000)",
+      "PowerShell(Get-CimInstance *)",
+      "Bash(findstr \"LISTENING\")",
+      "Bash(findstr \"18176\\\\|1864\")",
+      "Bash(curl -sS http://localhost:3001/workspace)",
+      "Bash(curl -sS \"http://localhost:3001/_next/static/chunks/app/workspace/page.js\")",
+      "Read(//mnt/c/logger/**)",
+      "Bash(npx tsc *)",
+      "PowerShell(& \"C:\\\\Program Files\\\\nodejs\\\\npx.cmd\" --prefix C:\\\\logger\\\\frontend tsc --noEmit -p C:\\\\logger\\\\frontend\\\\tsconfig.json 2>&1 | Select-Object -First 60)"
+    ]
+  }
+}

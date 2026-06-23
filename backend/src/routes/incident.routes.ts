@@ -7,6 +7,7 @@ import {
   getIncidents,
   getIncident,
   getAnalysisReport,
+  getLatestIncidentForService,
 } from '../services/incident.service';
 import { sendError } from '../utils/api-error';
 
@@ -56,6 +57,44 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     });
   } catch (err) {
     sendError(res, err, 'Failed to list incidents');
+  }
+});
+
+router.get('/latest', async (req: AuthRequest, res: Response) => {
+  try {
+    const serviceName = String(req.query.serviceName || '');
+    if (!serviceName) {
+      res.status(400).json({ error: 'serviceName is required' });
+      return;
+    }
+    const result = await getLatestIncidentForService(req.user!.userId, serviceName);
+    if (!result) {
+      res.json({ incident: null, report: null });
+      return;
+    }
+    const { incident, report } = result;
+    res.json({
+      incident: {
+        id: incident.id,
+        title: incident.title,
+        status: incident.status,
+        serviceName: incident.service_name,
+        createdAt: incident.created_at,
+        completedAt: incident.completed_at,
+      },
+      report: report
+        ? {
+            rootCause: report.root_cause,
+            confidenceScore: report.confidence_score,
+            affectedFiles: report.affected_files,
+            suggestedFix: report.suggested_fix,
+            timeline: report.timeline,
+            relevantCommits: report.relevant_commits,
+          }
+        : null,
+    });
+  } catch (err) {
+    sendError(res, err, 'Failed to get latest incident');
   }
 });
 

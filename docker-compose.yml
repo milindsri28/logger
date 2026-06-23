@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: aidebug_secret
       POSTGRES_DB: ai_debug
     ports:
-      - "5433:5432"  # 5433 avoids conflict with local PostgreSQL on Windows
+      - "5435:5432"  # 5435 avoids conflict with local PostgreSQL 13 (5433) and 18 (5434) on Windows
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/migrations/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql

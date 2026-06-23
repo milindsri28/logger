@@ -114,9 +114,11 @@ export interface AffectedFunction {
 
 export interface RelevantCommit {
   sha: string;
+  fullSha?: string;
   message: string;
   author: string;
   date: string;
+  url?: string;
 }
 
 export interface CodeSnippet {

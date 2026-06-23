@@ -232,3 +232,171 @@ export async function getCommitsForFiles(
 
   return commits.slice(0, limit);
 }
+
+export async function getRecentCommits(repo: Repository, limit = 20): Promise<RelevantCommit[]> {
+  const token = decrypt(repo.github_token_enc);
+  const branch = await getCurrentBranch(repo);
+  const res = await fetch(
+    `https://api.github.com/repos/${repo.owner}/${repo.name}/commits?per_page=${Math.min(limit, 100)}&sha=${encodeURIComponent(branch)}`,
+    { headers: githubHeaders(token) }
+  );
+  if (!res.ok) return [];
+
+  const data = await res.json() as Array<{
+    sha: string;
+    html_url: string;
+    commit: { message: string; author: { name: string; date: string } };
+  }>;
+
+  return data.map((c) => ({
+    sha: c.sha.slice(0, 7),
+    fullSha: c.sha,
+    message: c.commit.message.split('\n')[0],
+    author: c.commit.author.name,
+    date: c.commit.author.date,
+    url: c.html_url,
+  }));
+}
+
+export interface RelevantFile {
+  path: string;
+  changeCount: number;
+  lastModified?: string;
+}
+
+export async function getRelevantFiles(repo: Repository, limit = 15): Promise<RelevantFile[]> {
+  if (repo.local_path && (await pathExists(repo.local_path))) {
+    try {
+      const git = simpleGit(repo.local_path);
+      const raw = await git.raw(['log', '--name-only', '--pretty=format:', '-50']);
+      const counts = new Map<string, number>();
+
+      for (const line of raw.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.includes('node_modules') || trimmed.startsWith('.')) continue;
+        counts.set(trimmed, (counts.get(trimmed) || 0) + 1);
+      }
+
+      if (counts.size > 0) {
+        return Array.from(counts.entries())
+          .map(([path, changeCount]) => ({ path, changeCount }))
+          .sort((a, b) => b.changeCount - a.changeCount)
+          .slice(0, limit);
+      }
+    } catch {
+      // fall through to GitHub API
+    }
+  }
+
+  const token = decrypt(repo.github_token_enc);
+  const branch = await getCurrentBranch(repo);
+  const res = await fetch(
+    `https://api.github.com/repos/${repo.owner}/${repo.name}/commits?per_page=30&sha=${encodeURIComponent(branch)}`,
+    { headers: githubHeaders(token) }
+  );
+  if (!res.ok) return [];
+
+  const commits = await res.json() as Array<{ sha: string }>;
+  const counts = new Map<string, number>();
+
+  for (const commit of commits.slice(0, 15)) {
+    const detailRes = await fetch(
+      `https://api.github.com/repos/${repo.owner}/${repo.name}/commits/${commit.sha}`,
+      { headers: githubHeaders(token) }
+    );
+    if (!detailRes.ok) continue;
+    const detail = await detailRes.json() as { files?: Array<{ filename: string }> };
+    for (const file of detail.files || []) {
+      if (file.filename.includes('node_modules')) continue;
+      counts.set(file.filename, (counts.get(file.filename) || 0) + 1);
+    }
+  }
+
+  return Array.from(counts.entries())
+    .map(([path, changeCount]) => ({ path, changeCount }))
+    .sort((a, b) => b.changeCount - a.changeCount)
+    .slice(0, limit);
+}
+
+export interface RepoBranch {
+  name: string;
+  isDefault: boolean;
+}
+
+export async function listBranches(repo: Repository): Promise<RepoBranch[]> {
+  const token = decrypt(repo.github_token_enc);
+  const res = await fetch(
+    `https://api.github.com/repos/${repo.owner}/${repo.name}/branches?per_page=100`,
+    { headers: githubHeaders(token) }
+  );
+  if (!res.ok) {
+    throw new Error(`Failed to list branches (${res.status})`);
+  }
+  const data = await res.json() as Array<{ name: string }>;
+  return data.map((b) => ({
+    name: b.name,
+    isDefault: b.name === repo.default_branch,
+  }));
+}
+
+export async function getCurrentBranch(repo: Repository): Promise<string> {
+  if (!repo.local_path || !(await pathExists(repo.local_path))) {
+    return repo.default_branch;
+  }
+  try {
+    const git = simpleGit(repo.local_path);
+    const branch = await git.revparse(['--abbrev-ref', 'HEAD']);
+    return branch.trim() || repo.default_branch;
+  } catch {
+    return repo.default_branch;
+  }
+}
+
+export async function checkoutBranch(
+  userId: string,
+  repoId: string,
+  branch: string
+): Promise<{ branch: string; indexStatus: string }> {
+  const repo = await getRepository(userId, repoId);
+  if (!repo) throw new ApiError('REPO_NOT_FOUND', 'Repository not found', 404);
+  if (repo.clone_status !== 'ready' || !repo.local_path) {
+    throw new ApiError('REPO_NOT_READY', 'Repository is not ready');
+  }
+
+  const token = decrypt(repo.github_token_enc);
+  const git = gitWithAuth(token, repo.local_path);
+
+  const { logger } = await import('../utils/logger');
+  logger.info('GIT', `Checking out branch "${branch}"`, `${repo.owner}/${repo.name}`);
+
+  try {
+    // Single-branch shallow clones only track the default branch; widen fetch refspec first.
+    await git.remote(['set-branches', 'origin', '*']);
+    await git.fetch(['origin', branch, '--depth', '50']);
+    await git.checkout(['-B', branch, `origin/${branch}`]);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error('GIT', 'Branch checkout failed', message);
+    throw new ApiError('INTERNAL_ERROR', message, 500);
+  }
+
+  try {
+    await git.pull('origin', branch);
+  } catch {
+    // shallow pull may fail; checkout is enough
+  }
+
+  await updateIndexStatus(repo.id, 'indexing');
+  indexRepository(repo)
+    .then(() => logger.info('GIT', `Re-indexed after branch switch`, branch))
+    .catch(async (err) => {
+      const message = err instanceof Error ? err.message : String(err);
+      await query(
+        'UPDATE repositories SET index_status = $1, failure_reason = $2 WHERE id = $3',
+        ['failed', message.slice(0, 500), repo.id]
+      );
+      logger.error('GIT', 'Re-index failed after branch switch', message);
+    });
+
+  return { branch, indexStatus: 'indexing' };
+}

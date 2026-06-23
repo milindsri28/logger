@@ -1,6 +1,7 @@
 import { NodeSSH } from 'node-ssh';
 import { query, queryOne } from '../config/database';
 import { encrypt, decrypt } from '../utils/encryption';
+import { logger } from '../utils/logger';
 import { VpsConnection } from '../types';
 
 export type LogSource = 'pm2' | 'nginx' | 'docker' | 'node';
@@ -55,6 +56,7 @@ export async function createVpsConnection(
     [userId, data.name, host, data.port, username, data.authType, encrypt(data.credential)]
   );
   if (!conn) throw new Error('Failed to create VPS connection');
+  logger.info('VPS', `Connection saved: "${data.name}" → ${username}@${host}:${data.port}`);
   return conn;
 }
 
@@ -70,11 +72,15 @@ export async function deleteVpsConnection(userId: string, id: string): Promise<v
   await query('DELETE FROM vps_connections WHERE id = $1 AND user_id = $2', [id, userId]);
 }
 
-async function connectSsh(conn: VpsConnection): Promise<NodeSSH> {
+async function connectSsh(conn: VpsConnection, purpose: string): Promise<NodeSSH> {
   const ssh = new NodeSSH();
   const credential = decrypt(conn.credentials_enc);
   const host = sanitizeSshHost(conn.host);
   const username = sanitizeSshUsername(conn.username);
+  const target = `${username}@${host}:${conn.port}`;
+
+  logger.info('VPS', `SSH connecting (${purpose})`, target);
+  const start = Date.now();
 
   const connectConfig: Parameters<NodeSSH['connect']>[0] = {
     host,
@@ -89,21 +95,31 @@ async function connectSsh(conn: VpsConnection): Promise<NodeSSH> {
     connectConfig.password = credential;
   }
 
-  await ssh.connect(connectConfig);
-  return ssh;
+  try {
+    await ssh.connect(connectConfig);
+    logger.info('VPS', `SSH connected (${purpose})`, `${target} in ${Date.now() - start}ms`);
+    return ssh;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error('VPS', `SSH failed (${purpose})`, `${target} — ${message}`);
+    throw err;
+  }
 }
 
 export async function testConnection(conn: VpsConnection): Promise<{ success: boolean; info?: string; error?: string }> {
   let ssh: NodeSSH | null = null;
   try {
-    ssh = await connectSsh(conn);
+    ssh = await connectSsh(conn, 'test');
     const result = await ssh.execCommand('echo ok && uname -a');
     if (result.code !== 0) {
+      logger.warn('VPS', 'SSH test command failed', result.stderr || 'unknown error');
       return { success: false, error: result.stderr || 'Command failed' };
     }
+    logger.info('VPS', 'SSH test OK', result.stdout.trim().slice(0, 120));
     return { success: true, info: result.stdout.trim() };
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Connection failed' };
+    const message = err instanceof Error ? err.message : 'Connection failed';
+    return { success: false, error: message };
   } finally {
     ssh?.dispose();
   }
@@ -113,15 +129,17 @@ export async function fetchLogs(
   conn: VpsConnection,
   options: FetchLogsOptions
 ): Promise<Record<string, string>> {
-  const ssh = await connectSsh(conn);
+  const ssh = await connectSsh(conn, 'fetch-logs');
   const lines = options.lines || 500;
   const logs: Record<string, string> = {};
 
   try {
     for (const source of options.sources) {
       const command = buildLogCommand(source, lines, options.serviceName, options.containerName);
+      logger.debug('VPS', `exec: ${command.slice(0, 100)}…`);
       const result = await ssh.execCommand(command);
       logs[source] = result.stdout || result.stderr || `No output from ${source}`;
+      logger.info('VPS', `Fetched ${source} logs`, `${logs[source].length} bytes`);
     }
   } finally {
     ssh.dispose();
@@ -179,7 +197,7 @@ export async function listVpsServices(userId: string, vpsConnectionId: string): 
   const conn = await getVpsConnection(userId, vpsConnectionId);
   if (!conn) throw new Error('VPS connection not found');
 
-  const ssh = await connectSsh(conn);
+  const ssh = await connectSsh(conn, 'list-services');
   try {
     const services: VpsServiceInfo[] = [];
 
@@ -237,6 +255,7 @@ export async function listVpsServices(userId: string, vpsConnectionId: string): 
       services.push({ name: 'pm2', status: 'warning', type: 'system' });
     }
 
+    logger.info('VPS', `Discovered ${services.length} service(s)`, services.map((s) => s.name).join(', '));
     return services;
   } finally {
     ssh.dispose();
@@ -252,7 +271,7 @@ export async function getServiceLogs(
   const conn = await getVpsConnection(userId, vpsConnectionId);
   if (!conn) throw new Error('VPS connection not found');
 
-  const ssh = await connectSsh(conn);
+  const ssh = await connectSsh(conn, `logs:${service}`);
   try {
     const svc = service.toLowerCase();
     let command: string;
@@ -272,8 +291,12 @@ export async function getServiceLogs(
       }
     }
 
+    logger.debug('VPS', `exec logs for ${service}`, command.slice(0, 120));
     const result = await ssh.execCommand(command);
-    return result.stdout || result.stderr || `No logs for ${service}`;
+    const output = result.stdout || result.stderr || `No logs for ${service}`;
+    const lineCount = output.split('\n').length;
+    logger.info('VPS', `Fetched logs for "${service}"`, `${lineCount} lines, ${output.length} bytes`);
+    return output;
   } finally {
     ssh.dispose();
   }

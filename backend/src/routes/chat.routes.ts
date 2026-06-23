@@ -14,6 +14,7 @@ const messageSchema = z.object({
   serviceName: z.string().min(1),
   selectedFile: z.string().optional(),
   message: z.string().min(1).max(4000),
+  mode: z.enum(['question', 'analyze_logs', 'analyze_repository', 'correlate']).optional(),
 });
 
 router.post('/message', validateBody(messageSchema), async (req: AuthRequest, res: Response) => {

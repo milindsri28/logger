@@ -22,7 +22,7 @@ interface LogsPanelProps {
 
 export function LogsPanel(props: LogsPanelProps) {
   return (
-    <div className="flex h-full min-w-0 flex-col overflow-hidden bg-[#1a1a1a]">
+    <div className="flex h-full min-w-0 flex-col overflow-hidden bg-card">
       <PanelHeader
         icon={Terminal}
         title="Logs"

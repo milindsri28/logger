@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -8,6 +8,7 @@ import { fetchSetupStatus } from '@/hooks/useSetupStatus';
 import { AuthLayout } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -37,27 +38,45 @@ export default function LoginPage() {
 
   return (
     <AuthLayout>
-      <div className="space-y-1 text-center">
-        <h2 className="text-lg font-semibold">Sign in</h2>
-        <p className="text-sm text-muted-foreground">Access your debug workspace</p>
+      <div className="mb-6 space-y-0.5 text-center">
+        <h2 className="text-[15px] font-semibold">Sign in</h2>
+        <p className="text-[13px] text-muted-foreground">Continue to your workspace</p>
       </div>
-      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-        {error && <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2.5">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-destructive" />
+            <p className="text-[13px] text-destructive">{error}</p>
+          </div>
+        )}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-muted-foreground">Email</label>
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <label className="block text-[13px] font-medium text-muted-foreground">Email</label>
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            required
+          />
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-muted-foreground">Password</label>
-          <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <label className="block text-[13px] font-medium text-muted-foreground">Password</label>
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+          />
         </div>
         <Button type="submit" className="w-full" disabled={loading}>
+          {loading && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
           {loading ? 'Signing in…' : 'Sign in'}
         </Button>
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="text-center text-[13px] text-muted-foreground">
           No account?{' '}
           <Link href="/register" className="text-primary hover:underline">
-            Register
+            Create one
           </Link>
         </p>
       </form>

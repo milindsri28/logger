@@ -148,7 +148,7 @@ router.get('/logs', async (req: AuthRequest, res: Response) => {
   try {
     const vpsConnectionId = String(req.query.vpsConnectionId || '');
     const service = String(req.query.service || '');
-    const lines = parseInt(String(req.query.lines || '300'), 10);
+    const lines = parseInt(String(req.query.lines || '500'), 10);
     if (!vpsConnectionId || !service) {
       res.status(400).json({ error: 'vpsConnectionId and service are required' });
       return;
@@ -157,6 +157,25 @@ router.get('/logs', async (req: AuthRequest, res: Response) => {
     res.json({ service, logs, fetchedAt: new Date().toISOString() });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to fetch logs' });
+  }
+});
+
+router.get('/logs/download', async (req: AuthRequest, res: Response) => {
+  try {
+    const vpsConnectionId = String(req.query.vpsConnectionId || '');
+    const service = String(req.query.service || '');
+    const lines = parseInt(String(req.query.lines || '5000'), 10);
+    if (!vpsConnectionId || !service) {
+      res.status(400).json({ error: 'vpsConnectionId and service are required' });
+      return;
+    }
+    const logs = await getServiceLogs(req.user!.userId, vpsConnectionId, service, lines);
+    const filename = `${service}-logs-${new Date().toISOString().slice(0, 10)}.txt`;
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(logs);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to download logs' });
   }
 });
 

@@ -177,6 +177,20 @@ export async function getIncident(userId: string, id: string): Promise<Incident 
   );
 }
 
+export async function getLatestIncidentForService(
+  userId: string,
+  serviceName: string
+): Promise<{ incident: Incident; report: AnalysisReport | null } | null> {
+  const incident = await queryOne<Incident>(
+    `SELECT * FROM incidents WHERE user_id = $1 AND service_name = $2 AND status = 'completed'
+     ORDER BY completed_at DESC NULLS LAST LIMIT 1`,
+    [userId, serviceName]
+  );
+  if (!incident) return null;
+  const report = await getAnalysisReport(incident.id);
+  return { incident, report };
+}
+
 export async function getAnalysisReport(incidentId: string): Promise<AnalysisReport | null> {
   return queryOne<AnalysisReport>(
     'SELECT * FROM analysis_reports WHERE incident_id = $1',

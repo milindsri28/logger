@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -7,6 +7,7 @@ import { api, setToken } from '@/lib/api';
 import { AuthLayout } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -36,28 +37,52 @@ export default function RegisterPage() {
 
   return (
     <AuthLayout>
-      <div className="space-y-1 text-center">
-        <h2 className="text-lg font-semibold">Create account</h2>
-        <p className="text-sm text-muted-foreground">Create your account</p>
+      <div className="mb-6 space-y-0.5 text-center">
+        <h2 className="text-[15px] font-semibold">Create your account</h2>
+        <p className="text-[13px] text-muted-foreground">Start investigating in minutes</p>
       </div>
-      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-        {error && <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2.5">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-destructive" />
+            <p className="text-[13px] text-destructive">{error}</p>
+          </div>
+        )}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-muted-foreground">Name</label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
+          <label className="block text-[13px] font-medium text-muted-foreground">Full name</label>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
+            placeholder="Jane Smith"
+          />
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-muted-foreground">Email</label>
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <label className="block text-[13px] font-medium text-muted-foreground">Work email</label>
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            required
+          />
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-muted-foreground">Password</label>
-          <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+          <label className="block text-[13px] font-medium text-muted-foreground">Password</label>
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+            required
+            minLength={8}
+          />
         </div>
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Creating…' : 'Register'}
+          {loading && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
+          {loading ? 'Creating account…' : 'Create account'}
         </Button>
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="text-center text-[13px] text-muted-foreground">
           Already have an account?{' '}
           <Link href="/login" className="text-primary hover:underline">
             Sign in

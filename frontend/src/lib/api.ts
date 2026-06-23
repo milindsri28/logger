@@ -30,7 +30,7 @@ export async function api<T>(
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new Error(data.error || `Request failed: ${res.status}`);
+    throw new Error(data.message || data.error || `Request failed: ${res.status}`);
   }
   return data as T;
 }

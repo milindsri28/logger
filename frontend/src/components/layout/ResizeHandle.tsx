@@ -1,35 +1,42 @@
+'use client';
+
 import { Separator } from 'react-resizable-panels';
+import { GripHorizontal, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ResizeHandleProps {
-  direction?: 'horizontal' | 'vertical';
+  id: string;
+  /** Parent Group orientation: horizontal = col-resize, vertical = row-resize */
+  groupOrientation: 'horizontal' | 'vertical';
 }
 
-/**
- * Wider drag target for react-resizable-panels v4 Separator.
- * Default w-1/h-1 handles are nearly impossible to grab.
- */
-export function ResizeHandle({ direction = 'horizontal' }: ResizeHandleProps) {
-  const isHorizontal = direction === 'horizontal';
+export function ResizeHandle({ id, groupOrientation }: ResizeHandleProps) {
+  const isColResize = groupOrientation === 'horizontal';
 
   return (
     <Separator
+      id={id}
       className={cn(
-        'relative shrink-0 bg-[#4a4a4a] transition-colors',
-        'hover:bg-primary/60 active:bg-primary/80',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60',
-        'z-[1000] pointer-events-auto',
-        isHorizontal
-          ? 'w-[10px] min-w-[10px] cursor-col-resize'
-          : 'h-[10px] min-h-[10px] cursor-row-resize'
+        'panel-resize-handle group relative z-20 shrink-0',
+        'bg-border/90 transition-colors hover:bg-primary/40 active:bg-primary/60',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+        isColResize ? 'panel-resize-handle--col' : 'panel-resize-handle--row'
       )}
-    />
+    >
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        {isColResize ? (
+          <GripVertical className="size-3.5 text-muted-foreground/70 group-hover:text-primary" />
+        ) : (
+          <GripHorizontal className="size-3.5 text-muted-foreground/70 group-hover:text-primary" />
+        )}
+      </div>
+    </Separator>
   );
 }
 
 export function PanelContent({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn('relative isolate z-0 h-full w-full min-h-0 min-w-0 max-w-full overflow-hidden', className)}>
+    <div className={cn('flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden', className)}>
       {children}
     </div>
   );

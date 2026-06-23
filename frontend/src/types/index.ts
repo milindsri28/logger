@@ -40,6 +40,31 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
+export type ChatMode = 'question' | 'analyze_logs' | 'analyze_repository' | 'correlate';
+
+export interface GitCommit {
+  sha: string;
+  fullSha?: string;
+  message: string;
+  author: string;
+  date: string;
+  url?: string;
+}
+
+export interface RelevantFile {
+  path: string;
+  changeCount: number;
+}
+
+export interface InvestigationReport {
+  rootCause: string;
+  confidenceScore: number;
+  affectedFiles: Array<{ path: string; reason?: string }>;
+  suggestedFix: string;
+  timeline?: Array<{ timestamp: string; event: string }>;
+  relevantCommits?: GitCommit[];
+}
+
 export interface DashboardContext {
   repositoryId: string | null;
   vpsConnectionId: string | null;

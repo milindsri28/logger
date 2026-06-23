@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import { logger } from '../utils/logger';
 
 // Load from monorepo root (logger/.env), whether running from src/ or dist/
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
@@ -22,5 +23,5 @@ export const config = {
 };
 
 if (!config.encryptionKey || config.encryptionKey.length !== 64) {
-  console.warn('WARNING: ENCRYPTION_KEY must be 64 hex characters (32 bytes). Credential encryption will fail.');
+  logger.warn('CONFIG', 'ENCRYPTION_KEY must be 64 hex characters (32 bytes). Credential encryption will fail.');
 }
