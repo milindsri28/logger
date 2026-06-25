@@ -7,6 +7,7 @@ import { encrypt, decrypt } from '../utils/encryption';
 import { Repository, RelevantCommit } from '../types';
 import { indexRepository, updateIndexStatus } from './code-index.service';
 import { getUserGithubTokenEnc, saveUserGithubToken } from './user.service';
+import { requireGitHubAccessToken } from './github-token.service';
 import { ApiError } from '../utils/api-error';
 
 export function parseRepoUrl(url: string): { owner: string; name: string } {
@@ -78,11 +79,11 @@ export async function connectGitHub(userId: string, githubToken: string): Promis
 
 async function resolveGitHubToken(userId: string, githubToken?: string): Promise<string> {
   if (githubToken) return githubToken;
-  const stored = await getUserGithubTokenEnc(userId);
-  if (!stored) {
+  try {
+    return await requireGitHubAccessToken(userId);
+  } catch {
     throw new ApiError('INVALID_TOKEN', 'GitHub token required. Connect GitHub first.');
   }
-  return decrypt(stored);
 }
 
 export async function addRepository(
@@ -174,6 +175,97 @@ async function pathExists(p: string): Promise<boolean> {
 
 export async function getRepositories(userId: string): Promise<Repository[]> {
   return query<Repository>('SELECT * FROM repositories WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+}
+
+export interface AvailableGitHubRepo {
+  id: number;
+  fullName: string;
+  owner: string;
+  name: string;
+  htmlUrl: string;
+  private: boolean;
+  defaultBranch: string;
+  connected: boolean;
+}
+
+export async function listAvailableGitHubRepos(userId: string): Promise<AvailableGitHubRepo[]> {
+  const token = await requireGitHubAccessToken(userId);
+  const connected = await getRepositories(userId);
+  const connectedSet = new Set(connected.map((r) => `${r.owner}/${r.name}`));
+
+  const repos: AvailableGitHubRepo[] = [];
+  let page = 1;
+
+  while (page <= 10) {
+    const res = await fetch(
+      `https://api.github.com/user/repos?per_page=100&page=${page}&sort=updated&affiliation=owner,collaborator,organization_member`,
+      { headers: githubHeaders(token) }
+    );
+
+    if (!res.ok) {
+      throw new Error(`GitHub API error (${res.status}) when listing repositories`);
+    }
+
+    const data = (await res.json()) as Array<{
+      id: number;
+      full_name: string;
+      owner: { login: string };
+      name: string;
+      html_url: string;
+      private: boolean;
+      default_branch?: string;
+    }>;
+
+    if (data.length === 0) break;
+
+    for (const repo of data) {
+      repos.push({
+        id: repo.id,
+        fullName: repo.full_name,
+        owner: repo.owner.login,
+        name: repo.name,
+        htmlUrl: repo.html_url,
+        private: repo.private,
+        defaultBranch: repo.default_branch || 'main',
+        connected: connectedSet.has(repo.full_name),
+      });
+    }
+
+    if (data.length < 100) break;
+    page += 1;
+  }
+
+  return repos;
+}
+
+export async function connectRepositories(
+  userId: string,
+  repoUrls: string[]
+): Promise<{
+  connected: Array<{ id: string; owner: string; name: string; repoUrl: string }>;
+  errors: Array<{ repoUrl: string; message: string }>;
+}> {
+  const connected: Array<{ id: string; owner: string; name: string; repoUrl: string }> = [];
+  const errors: Array<{ repoUrl: string; message: string }> = [];
+
+  for (const repoUrl of repoUrls) {
+    try {
+      const repo = await addRepository(userId, repoUrl);
+      connected.push({
+        id: repo.id,
+        owner: repo.owner,
+        name: repo.name,
+        repoUrl: repo.repo_url,
+      });
+    } catch (err) {
+      errors.push({
+        repoUrl,
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  return { connected, errors };
 }
 
 export async function getRepository(userId: string, repoId: string): Promise<Repository | null> {

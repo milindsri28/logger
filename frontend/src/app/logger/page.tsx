@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Group, Panel } from 'react-resizable-panels';
 import { AuthGuard } from '@/components/AuthGuard';
 import { AppShell } from '@/components/layout/AppShell';
@@ -14,12 +13,12 @@ import { Button } from '@/components/ui/button';
 import { useRepositories, useVpsConnections } from '@/hooks/useRepository';
 import { useVpsServices, useVpsLogs } from '@/hooks/useVps';
 import { useSetupStatus } from '@/hooks/useSetupStatus';
+import { EmptyInfrastructureHint } from '@/components/setup/EmptyInfrastructureHint';
 
 const RESIZE_HIT = { coarse: 48, fine: 24 };
 
 export default function LoggerPage() {
-  const router = useRouter();
-  const { data: setup, isLoading: setupLoading } = useSetupStatus();
+  const { data: setup } = useSetupStatus();
   const [vpsConnectionId, setVpsConnectionId] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -31,12 +30,6 @@ export default function LoggerPage() {
   const vpsList = vpsData?.connections ?? [];
   const activeRepo = repos[0];
   const activeVps = vpsList.find((v) => v.id === vpsConnectionId);
-
-  useEffect(() => {
-    if (!setupLoading && setup && !setup.canUseWorkspace) {
-      router.replace('/onboarding');
-    }
-  }, [setup, setupLoading, router]);
 
   useEffect(() => {
     if (!vpsConnectionId && vpsList[0]) setVpsConnectionId(vpsList[0].id);
@@ -64,9 +57,9 @@ export default function LoggerPage() {
   const toolbar = (
     <div className="flex w-full flex-wrap items-center gap-2">
       {vpsList.length === 0 ? (
-        <Link href="/account?tab=vps">
+        <Link href="/integrations">
           <Button variant="outline" size="sm" className="h-8 text-[12px]">
-            Connect server
+            Connect infrastructure
           </Button>
         </Link>
       ) : (
@@ -90,7 +83,7 @@ export default function LoggerPage() {
     </div>
   );
 
-  if (setupLoading) {
+  if (!setup) {
     return (
       <AuthGuard>
         <AppShell>
@@ -109,9 +102,7 @@ export default function LoggerPage() {
       >
         <div className="h-full min-h-0 p-2">
           {!vpsConnectionId ? (
-            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              Connect a server to view logs
-            </div>
+            <EmptyInfrastructureHint />
           ) : (
             <Group
               id="logger-main"

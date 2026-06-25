@@ -6,6 +6,11 @@ import { AnalysisResult, ExtractedSignals, RelevantCommit, CodeSnippet } from '.
 const SYSTEM_PROMPT = `You are a Senior Staff Engineer and SRE analyzing a production incident.
 Given production logs, stack traces, relevant code snippets, and recent commits, identify the root cause.
 
+CRITICAL RULES:
+- Only reference file paths, functions, commits, and errors that appear in the provided context.
+- If evidence is insufficient, set confidenceScore below 40 and state uncertainty in rootCause.
+- Do not invent file paths, commit SHAs, or error messages not present in the input.
+
 Respond ONLY with valid JSON matching this schema:
 {
   "rootCause": "string - detailed root cause analysis",
@@ -118,7 +123,12 @@ export function getLlmModelName(): string {
   return config.llm.provider === 'gemini' ? config.llm.geminiModel : config.llm.openaiModel;
 }
 
-const CHAT_SYSTEM = `You are a senior SRE helping debug production incidents. Be concise, actionable, and reference log lines or code when relevant. Do not use JSON — respond in markdown-friendly plain text.`;
+const CHAT_SYSTEM = `You are a senior SRE helping debug production incidents.
+RULES:
+- Answer ONLY using the logs, code snippets, and commits provided in the user message.
+- Cite evidence with inline backticks: file paths like \`src/foo.ts:42\` or quoted log lines.
+- If the answer is not supported by the provided context, say: "Not found in the provided logs or repository context."
+- Do not invent files, errors, or commits. Be concise (2-4 short paragraphs). Markdown-friendly plain text, no JSON.`;
 
 export async function analyzeWithOpenAIChat(userPrompt: string): Promise<string> {
   const openai = new OpenAI({ apiKey: config.llm.openaiApiKey });
@@ -128,7 +138,7 @@ export async function analyzeWithOpenAIChat(userPrompt: string): Promise<string>
       { role: 'system', content: CHAT_SYSTEM },
       { role: 'user', content: userPrompt },
     ],
-    temperature: 0.3,
+    temperature: 0.1,
   });
   return response.choices[0]?.message?.content?.trim() || 'No response from AI.';
 }

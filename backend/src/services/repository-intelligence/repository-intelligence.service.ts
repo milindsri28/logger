@@ -41,7 +41,7 @@ async function clearScanChildren(scanId: string): Promise<void> {
   await Promise.all([
     query('DELETE FROM repository_apis WHERE scan_id = $1', [scanId]),
     query('DELETE FROM repository_services WHERE scan_id = $1', [scanId]),
-    query('DELETE FROM repository_integrations WHERE scan_id = $1', [scanId]),
+    query('DELETE FROM repository_detected_integrations WHERE scan_id = $1', [scanId]),
     query('DELETE FROM repository_hot_files WHERE scan_id = $1', [scanId]),
   ]);
 }
@@ -106,7 +106,7 @@ async function persistScanResult(repositoryId: string, result: ScanResult): Prom
       query('INSERT INTO repository_services (scan_id, name) VALUES ($1, $2)', [scan.id, name])
     ),
     ...result.integrations.map((name) =>
-      query('INSERT INTO repository_integrations (scan_id, name) VALUES ($1, $2)', [scan.id, name])
+      query('INSERT INTO repository_detected_integrations (scan_id, name) VALUES ($1, $2)', [scan.id, name])
     ),
     ...result.hotFiles.map((hf) =>
       query(
@@ -241,7 +241,7 @@ export async function getIntegrations(
 ): Promise<{ branch: string; integrations: string[] }> {
   const { scan, branch: resolvedBranch } = await requireCompletedScan(userId, repositoryId, branch);
   const rows = await query<{ name: string }>(
-    'SELECT name FROM repository_integrations WHERE scan_id = $1 ORDER BY name',
+    'SELECT name FROM repository_detected_integrations WHERE scan_id = $1 ORDER BY name',
     [scan.id]
   );
   return { branch: resolvedBranch, integrations: rows.map((r) => r.name) };

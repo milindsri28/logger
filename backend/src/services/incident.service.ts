@@ -1,11 +1,11 @@
 import { query, queryOne } from '../config/database';
-import { getRepository } from './github.service';
-import { getCommitsForFiles } from './github.service';
-import { getVpsConnection, getServiceLogs } from './vps.service';
+import { getRepository, getCommitsForFiles } from './github.service';
 import { parseLogs } from './log-parser.service';
 import { searchCodeIndex, getCodeSnippets } from './code-index.service';
 import { analyzeWithLlm, getLlmModelName } from './llm.service';
 import { getRepoFile } from './repo.service';
+import { getAgentForUser } from './agents/agent.service';
+import { fetchAgentServiceLogs } from './agents/agent-logs.service';
 import { Incident, AnalysisReport } from '../types';
 import { ApiError } from '../utils/api-error';
 
@@ -17,14 +17,14 @@ function inferLogSources(serviceName: string): string[] {
   const svc = serviceName.toLowerCase();
   if (svc === 'nginx') return ['nginx'];
   if (svc === 'postgres' || svc === 'postgresql' || svc === 'redis') return ['docker'];
-  return ['pm2'];
+  return ['docker'];
 }
 
 export async function createAndAnalyzeIncident(
   userId: string,
   data: {
     repositoryId: string;
-    vpsConnectionId: string;
+    agentId: string;
     serviceName: string;
     selectedFile?: string;
     title?: string;
@@ -37,11 +37,11 @@ export async function createAndAnalyzeIncident(
     throw new ApiError('REPO_NOT_READY', 'Repository is not ready. Wait for clone to complete.');
   }
   if (repo.index_status !== 'ready') {
-    throw new ApiError('REPO_NOT_READY', 'Repository index is not ready.');
+    throw new ApiError('REPO_NOT_READY', 'Repository index is not ready. Wait for indexing to finish.');
   }
 
-  const vps = await getVpsConnection(userId, data.vpsConnectionId);
-  if (!vps) throw new ApiError('VPS_NOT_FOUND', 'VPS connection not found', 404);
+  const agent = await getAgentForUser(userId, data.agentId);
+  if (!agent) throw new ApiError('AGENT_NOT_FOUND', 'Agent not found', 404);
 
   const title =
     data.title?.trim() ||
@@ -50,9 +50,9 @@ export async function createAndAnalyzeIncident(
   const logSources = inferLogSources(data.serviceName);
 
   const incident = await queryOne<Incident>(
-    `INSERT INTO incidents (user_id, repository_id, vps_connection_id, title, status, log_sources, service_name, progress_step)
+    `INSERT INTO incidents (user_id, repository_id, agent_id, title, status, log_sources, service_name, progress_step)
      VALUES ($1, $2, $3, $4, 'analyzing', $5, $6, 'logs') RETURNING *`,
-    [userId, data.repositoryId, data.vpsConnectionId, title, JSON.stringify(logSources), data.serviceName]
+    [userId, data.repositoryId, data.agentId, title, JSON.stringify(logSources), data.serviceName]
   );
   if (!incident) throw new Error('Failed to create incident');
 
@@ -72,6 +72,7 @@ async function runAnalysis(
   repo: NonNullable<Awaited<ReturnType<typeof getRepository>>>,
   userId: string,
   data: {
+    agentId: string;
     serviceName: string;
     selectedFile?: string;
     lines?: number;
@@ -79,9 +80,8 @@ async function runAnalysis(
 ): Promise<void> {
   await setProgress(incident.id, 'logs');
 
-  const rawLogs = await getServiceLogs(
-    userId,
-    incident.vps_connection_id,
+  const rawLogs = await fetchAgentServiceLogs(
+    data.agentId,
     data.serviceName,
     data.lines || 500
   );
@@ -137,11 +137,6 @@ async function runAnalysis(
     analysis.relevantCommits = commits;
   }
 
-  await query(
-    `UPDATE incidents SET status = 'completed', raw_logs = $1, extracted_signals = $2, progress_step = 'done', completed_at = NOW() WHERE id = $3`,
-    [rawLogs, JSON.stringify(signals), incident.id]
-  );
-
   await queryOne(
     `INSERT INTO analysis_reports (
       incident_id, root_cause, confidence_score, affected_files, affected_functions,
@@ -160,6 +155,11 @@ async function runAnalysis(
       getLlmModelName(),
       JSON.stringify(analysis),
     ]
+  );
+
+  await query(
+    `UPDATE incidents SET status = 'completed', raw_logs = $1, extracted_signals = $2, progress_step = 'done', completed_at = NOW() WHERE id = $3`,
+    [rawLogs, JSON.stringify(signals), incident.id]
   );
 }
 

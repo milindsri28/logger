@@ -199,7 +199,14 @@ function GitHubSection() {
 
   return (
     <div className="space-y-5">
-      <SectionCard title="Add repository" description="Connect a GitHub repository to enable code correlation.">
+      <SectionCard title="Add repository" description="Pick repos from GitHub on the Integrations page, or add manually with a PAT below.">
+        <div className="mb-4">
+          <Link href="/integrations">
+            <Button size="sm" variant="outline">
+              Choose from GitHub
+            </Button>
+          </Link>
+        </div>
         <form onSubmit={handleConnect} className="space-y-4">
           {error && (
             <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2.5">

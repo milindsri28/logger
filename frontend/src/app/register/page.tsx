@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api, setToken } from '@/lib/api';
+import { api, setToken, getBackendUrl } from '@/lib/api';
 import { AuthLayout } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,7 @@ export default function RegisterPage() {
         body: JSON.stringify({ email, password, name }),
       });
       setToken(data.token);
-      router.push('/onboarding');
+      router.push('/integrations');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
@@ -81,6 +81,16 @@ export default function RegisterPage() {
         <Button type="submit" className="w-full" disabled={loading}>
           {loading && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
           {loading ? 'Creating account…' : 'Create account'}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={() => {
+            window.location.href = `${getBackendUrl()}/api/oauth/github/authorize?action=login`;
+          }}
+        >
+          Sign up with GitHub
         </Button>
         <p className="text-center text-[13px] text-muted-foreground">
           Already have an account?{' '}

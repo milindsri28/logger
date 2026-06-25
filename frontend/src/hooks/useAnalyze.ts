@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 
 interface AnalyzeInput {
   repositoryId: string;
-  vpsConnectionId: string;
+  agentId: string;
   serviceName: string;
   selectedFile?: string | null;
   title?: string;
@@ -49,3 +49,5 @@ export function progressLabel(step?: string | null): string {
   if (!step) return 'Starting…';
   return STEP_LABELS[step] || step;
 }
+
+export const ANALYZE_POLL_TIMEOUT_MS = 180_000;

@@ -10,7 +10,7 @@ router.use(authMiddleware);
 
 const messageSchema = z.object({
   repositoryId: z.string().uuid(),
-  vpsConnectionId: z.string().uuid(),
+  agentId: z.string().uuid(),
   serviceName: z.string().min(1),
   selectedFile: z.string().optional(),
   message: z.string().min(1).max(4000),

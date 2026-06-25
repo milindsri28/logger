@@ -14,6 +14,8 @@ import {
   listBranches,
   getCurrentBranch,
   checkoutBranch,
+  listAvailableGitHubRepos,
+  connectRepositories,
 } from '../services/github.service';
 import { sendError } from '../utils/api-error';
 
@@ -27,6 +29,10 @@ const connectSchema = z.object({
 const repositorySchema = z.object({
   repoUrl: z.string().url(),
   githubToken: z.string().min(1).optional(),
+});
+
+const connectReposSchema = z.object({
+  repoUrls: z.array(z.string().url()).min(1).max(20),
 });
 
 router.post('/connect', validateBody(connectSchema), async (req: AuthRequest, res: Response) => {
@@ -54,6 +60,24 @@ router.post('/repository', validateBody(repositorySchema), async (req: AuthReque
     });
   } catch (err) {
     sendError(res, err, 'Failed to add repository');
+  }
+});
+
+router.get('/available-repositories', async (req: AuthRequest, res: Response) => {
+  try {
+    const repositories = await listAvailableGitHubRepos(req.user!.userId);
+    res.json({ repositories });
+  } catch (err) {
+    sendError(res, err, 'Failed to list available repositories');
+  }
+});
+
+router.post('/repositories/connect', validateBody(connectReposSchema), async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await connectRepositories(req.user!.userId, req.body.repoUrls);
+    res.status(201).json(result);
+  } catch (err) {
+    sendError(res, err, 'Failed to connect repositories');
   }
 });
 

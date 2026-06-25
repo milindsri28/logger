@@ -25,7 +25,7 @@ const analyzeLimiter = rateLimit({
 
 const analyzeSchema = z.object({
   repositoryId: z.string().uuid(),
-  vpsConnectionId: z.string().uuid(),
+  agentId: z.string().uuid(),
   serviceName: z.string().min(1),
   selectedFile: z.string().optional(),
   title: z.string().optional(),

@@ -1,0 +1,2 @@
+[console_scripts]
+argusops-agent = argusops_agent.main:main

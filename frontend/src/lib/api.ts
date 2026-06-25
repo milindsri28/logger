@@ -1,4 +1,9 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+
+export function getBackendUrl(): string {
+  return BACKEND_URL.replace(/\/$/, '');
+}
 
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null;

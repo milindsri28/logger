@@ -3,6 +3,7 @@ export interface User {
   email: string;
   password_hash: string;
   name: string | null;
+  github_id?: string | null;
   github_token_enc?: string | null;
   created_at: Date;
   updated_at: Date;
@@ -57,7 +58,8 @@ export interface Incident {
   id: string;
   user_id: string;
   repository_id: string;
-  vps_connection_id: string;
+  vps_connection_id: string | null;
+  agent_id?: string | null;
   title: string;
   status: 'pending' | 'analyzing' | 'completed' | 'failed';
   log_sources: string[];

@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 
 interface ChatPanelProps {
   repositoryId: string | null;
-  vpsConnectionId: string | null;
+  agentId: string | null;
   selectedFile: string | null;
   selectedService: string | null;
   investigationReport?: InvestigationReport | null;
@@ -37,7 +37,7 @@ const CHAT_MODES: { mode: ChatMode; label: string }[] = [
 
 export function ChatPanel({
   repositoryId,
-  vpsConnectionId,
+  agentId,
   selectedFile,
   selectedService,
   investigationReport,
@@ -50,10 +50,15 @@ export function ChatPanel({
   const [input, setInput] = useState('');
   const [mode, setMode] = useState<ChatMode>('question');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [lastContext, setLastContext] = useState<{
+    logLineCount: number;
+    fileCount: number;
+    commitCount: number;
+  } | null>(null);
   const chatMutation = useChatMutation();
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const canSend = !!repositoryId && !!vpsConnectionId && !!selectedService && !chatMutation.isPending;
+  const canSend = !!repositoryId && !!agentId && !!selectedService && !chatMutation.isPending;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -74,11 +79,16 @@ export function ChatPanel({
     try {
       const result = await chatMutation.mutateAsync({
         repositoryId: repositoryId!,
-        vpsConnectionId: vpsConnectionId!,
+        agentId: agentId!,
         serviceName: selectedService!,
         selectedFile,
         message: text.trim(),
         mode,
+      });
+      setLastContext({
+        logLineCount: result.contextUsed.logLineCount,
+        fileCount: result.contextUsed.fileCount,
+        commitCount: result.contextUsed.commitCount,
       });
       setMessages((prev) => [
         ...prev,
@@ -139,7 +149,9 @@ export function ChatPanel({
                 ))}
               </div>
             ) : (
-              <p className="text-[11px] text-muted-foreground">Select repository, environment, and service to begin.</p>
+              <p className="text-[11px] text-muted-foreground">
+                Select repository, agent environment, and service to begin.
+              </p>
             )}
           </div>
 
@@ -150,6 +162,12 @@ export function ChatPanel({
             analyzeStep={analyzeStep}
             analyzeError={analyzeError}
           />
+
+          {investigationReport && (
+            <p className="text-[10px] text-muted-foreground">
+              Investigation context loaded — ask follow-up questions about the report, logs, or repo.
+            </p>
+          )}
 
           {messages.map((msg) =>
             msg.role === 'user' ? (
@@ -186,7 +204,7 @@ export function ChatPanel({
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={canSend ? 'Ask anything about this investigation…' : 'Select a service first'}
+            placeholder={canSend ? 'Ask anything about this investigation…' : 'Connect agent and select a service'}
             className="min-h-[40px] max-h-[100px] min-w-0 flex-1 border-border/60 bg-background text-[12px]"
             disabled={!canSend}
             rows={2}
@@ -201,6 +219,12 @@ export function ChatPanel({
             <Send className="size-3.5" />
           </Button>
         </div>
+        {lastContext && (
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            Context: {lastContext.logLineCount} log lines, {lastContext.fileCount} files,{' '}
+            {lastContext.commitCount} commits
+          </p>
+        )}
       </form>
     </div>
   );

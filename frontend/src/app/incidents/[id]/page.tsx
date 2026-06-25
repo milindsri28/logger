@@ -443,7 +443,7 @@ function StatusBadge({ status }: { status: string }) {
     },
   };
   const config = map[status] ?? map.pending;
-  const Icon = config.icon;
+  const Icon = config.icon as React.ComponentType<{ className?: string }>;
   return (
     <span
       className={cn(

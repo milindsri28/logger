@@ -22,7 +22,11 @@ import {
 import { clearToken } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { SetupBanner } from '@/components/setup/SetupBanner';
+import { useSetupStatus } from '@/hooks/useSetupStatus';
 import type { VpsService } from '@/types';
+import type { ServiceDiscoveryInfo } from '@/hooks/useAgentInfra';
+import { emptyServicesMessage, formatDiscoveryHint } from '@/hooks/useAgentInfra';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -31,6 +35,8 @@ interface AppShellProps {
   availableServices?: VpsService[];
   servicesLoading?: boolean;
   servicesError?: boolean;
+  servicesErrorMessage?: string;
+  servicesDiscovery?: ServiceDiscoveryInfo;
   selectedService?: string | null;
   onSelectService?: (name: string) => void;
   onAddService?: (name: string) => void;
@@ -47,7 +53,7 @@ const navItems = [
   { href: '/intelligence', label: 'Repository Intelligence', icon: Radar },
   { href: '/logger', label: 'Logger', icon: ScrollText },
   { href: '/account?tab=history', label: 'Incidents', icon: AlertCircle },
-  { href: '/account?tab=github', label: 'Integrations', icon: Plug },
+  { href: '/integrations', label: 'Integrations', icon: Plug },
   { href: '/account', label: 'Settings', icon: Settings },
 ];
 
@@ -64,6 +70,8 @@ export function AppShell({
   availableServices = [],
   servicesLoading = false,
   servicesError = false,
+  servicesErrorMessage,
+  servicesDiscovery,
   selectedService,
   onSelectService,
   onAddService,
@@ -76,12 +84,20 @@ export function AppShell({
   const router = useRouter();
   const pathname = usePathname();
   const [addOpen, setAddOpen] = useState(false);
+  const { data: setup, isLoading: setupLoading } = useSetupStatus();
+
+  const discoveryHint = formatDiscoveryHint(servicesDiscovery);
+  const addListEmptyMessage = emptyServicesMessage(
+    servicesDiscovery,
+    !servicesLoading && !servicesError && availableServices.length === 0 && (services?.length ?? 0) > 0
+  );
 
   function isNavActive(href: string) {
     if (href === '/workspace') return pathname === '/workspace';
     if (href === '/repo') return pathname === '/repo';
     if (href === '/intelligence') return pathname === '/intelligence';
     if (href === '/logger') return pathname === '/logger';
+    if (href === '/integrations') return pathname === '/integrations';
     if (href.includes('tab=history')) {
       return pathname.startsWith('/incidents') || pathname.includes('history');
     }
@@ -150,6 +166,9 @@ export function AppShell({
             {addOpen && (
               <div className="mb-2 rounded-md border border-border/60 bg-card/40 p-1.5">
                 <p className="mb-1 px-1 text-[10px] font-medium text-muted-foreground">Add to list</p>
+                {discoveryHint && !servicesLoading && !servicesError && (
+                  <p className="mb-1 px-1 text-[9px] leading-snug text-muted-foreground/80">{discoveryHint}</p>
+                )}
                 {servicesLoading && (
                   <div className="flex items-center gap-1.5 px-1 py-2 text-[11px] text-muted-foreground">
                     <Loader2 className="size-3 animate-spin" />
@@ -157,10 +176,12 @@ export function AppShell({
                   </div>
                 )}
                 {servicesError && (
-                  <p className="px-1 py-1 text-[10px] text-destructive">Could not load services</p>
+                  <p className="px-1 py-1 text-[10px] text-destructive">
+                    {servicesErrorMessage || 'Could not load services'}
+                  </p>
                 )}
                 {!servicesLoading && !servicesError && availableServices.length === 0 && (
-                  <p className="px-1 py-1 text-[10px] text-muted-foreground">No more services on server</p>
+                  <p className="px-1 py-1 text-[10px] text-muted-foreground">{addListEmptyMessage}</p>
                 )}
                 {!servicesLoading &&
                   !servicesError &&
@@ -305,6 +326,7 @@ export function AppShell({
             {toolbar}
           </header>
         )}
+        <SetupBanner setup={setup} isLoading={setupLoading} />
         <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
       </div>
     </div>

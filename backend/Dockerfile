@@ -17,6 +17,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# simple-git shells out to the git binary for clone/fetch/pull
+RUN apk add --no-cache git
+
 COPY backend/package.json backend/package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 

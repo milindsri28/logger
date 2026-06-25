@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import {
   Download,
   RefreshCw,
@@ -29,8 +29,11 @@ interface LogExplorerProps {
   logs: string | undefined;
   isLoading: boolean;
   isError: boolean;
+  errorMessage?: string;
   serviceName: string | null;
   vpsConnectionId: string | null;
+  agentId?: string | null;
+  serviceType?: 'pm2' | 'docker' | 'system';
   autoRefresh: boolean;
   liveMode: boolean;
   onAutoRefreshChange: (v: boolean) => void;
@@ -58,8 +61,11 @@ export function LogExplorer({
   logs,
   isLoading,
   isError,
+  errorMessage,
   serviceName,
   vpsConnectionId,
+  agentId,
+  serviceType,
   autoRefresh,
   liveMode,
   onAutoRefreshChange,
@@ -73,6 +79,7 @@ export function LogExplorer({
   const [internalSearch, setInternalSearch] = useState('');
   const [page, setPage] = useState(1);
   const [linesPerPage, setLinesPerPage] = useState(LINES_PER_PAGE);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const searchQuery = externalSearch ?? internalSearch;
   const setSearchQuery = onSearchQueryChange ?? setInternalSearch;
@@ -96,11 +103,36 @@ export function LogExplorer({
   const currentPage = Math.min(page, totalPages);
   const pageLines = filtered.slice((currentPage - 1) * linesPerPage, currentPage * linesPerPage);
 
+  const liveSupported = serviceType !== 'system';
+
+  useEffect(() => {
+    if (!liveSupported && liveMode) {
+      onLiveModeChange(false);
+    }
+  }, [liveSupported, liveMode, onLiveModeChange]);
+
+  useEffect(() => {
+    if (liveMode) {
+      setPage(totalPages);
+    }
+  }, [liveMode, totalPages, logs]);
+
+  useEffect(() => {
+    if (liveMode && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [logs, liveMode]);
+
   function downloadLogs() {
-    if (!serviceName || !vpsConnectionId) return;
+    if (!serviceName) return;
     const token = getToken();
     const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-    const url = `${base}/vps/logs/download?vpsConnectionId=${vpsConnectionId}&service=${encodeURIComponent(serviceName)}`;
+    const url = agentId
+      ? `${base}/agents/${agentId}/logs/download?service=${encodeURIComponent(serviceName)}${serviceType === 'pm2' || serviceType === 'docker' || serviceType === 'system' ? `&type=${serviceType}` : ''}`
+      : vpsConnectionId
+        ? `${base}/vps/logs/download?vpsConnectionId=${vpsConnectionId}&service=${encodeURIComponent(serviceName)}`
+        : null;
+    if (!url) return;
     const a = document.createElement('a');
     a.href = url;
     a.download = `${serviceName}-logs.txt`;
@@ -181,12 +213,19 @@ export function LogExplorer({
           />
         </div>
 
-        <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <label
+          className={cn(
+            'flex items-center gap-1.5 text-[11px] text-muted-foreground',
+            !liveSupported && 'cursor-not-allowed opacity-50'
+          )}
+          title={!liveSupported ? 'Live streaming is not available for system services' : undefined}
+        >
           <Switch
             checked={liveMode}
+            disabled={!liveSupported}
             onCheckedChange={(v) => {
               onLiveModeChange(v);
-              onAutoRefreshChange(v);
+              if (v) onAutoRefreshChange(false);
             }}
           />
           Live
@@ -203,7 +242,10 @@ export function LogExplorer({
         </Button>
       </div>
 
-      <div className="panel-touch-scroll relative min-h-0 flex-1 overflow-auto font-mono-code text-[12px] leading-5">
+      <div
+        ref={scrollRef}
+        className="panel-touch-scroll relative min-h-0 flex-1 overflow-auto font-mono-code text-[12px] leading-5"
+      >
         {!serviceName && (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             Select a service to view logs
@@ -211,7 +253,9 @@ export function LogExplorer({
         )}
         {serviceName && isLoading && <Skeleton className="absolute inset-0 rounded-none" />}
         {serviceName && isError && (
-          <div className="flex h-full items-center justify-center text-sm text-destructive">Failed to load logs</div>
+          <div className="flex h-full items-center justify-center px-4 text-center text-sm text-destructive">
+            {errorMessage || 'Failed to load logs'}
+          </div>
         )}
         {serviceName && !isLoading && !isError && (
           <table className="w-full border-collapse">

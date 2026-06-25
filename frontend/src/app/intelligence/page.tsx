@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { AuthGuard } from '@/components/AuthGuard';
 import { AppShell } from '@/components/layout/AppShell';
 import { SelectField } from '@/components/layout/PanelHeader';
@@ -14,8 +13,7 @@ import { useRepositories, useVpsConnections } from '@/hooks/useRepository';
 import { useSetupStatus } from '@/hooks/useSetupStatus';
 
 export default function IntelligencePage() {
-  const router = useRouter();
-  const { data: setup, isLoading: setupLoading } = useSetupStatus();
+  const { data: setup } = useSetupStatus();
   const [repositoryId, setRepositoryId] = useState<string | null>(null);
 
   const { data: reposData } = useRepositories();
@@ -39,12 +37,6 @@ export default function IntelligencePage() {
   const currentBranch = branchData?.currentBranch ?? null;
 
   useEffect(() => {
-    if (!setupLoading && setup && !setup.canUseWorkspace) {
-      router.replace('/onboarding');
-    }
-  }, [setup, setupLoading, router]);
-
-  useEffect(() => {
     if (!repositoryId && repos[0]) setRepositoryId(repos[0].id);
   }, [repos, repositoryId]);
 
@@ -61,7 +53,7 @@ export default function IntelligencePage() {
   const toolbar = (
     <div className="flex w-full flex-wrap items-center gap-2">
       {repos.length === 0 ? (
-        <Link href="/account?tab=github">
+        <Link href="/integrations">
           <Button variant="outline" size="sm" className="h-8 text-[12px]">
             Connect repository
           </Button>
@@ -97,7 +89,7 @@ export default function IntelligencePage() {
     </div>
   );
 
-  if (setupLoading) {
+  if (!setup) {
     return (
       <AuthGuard>
         <AppShell>

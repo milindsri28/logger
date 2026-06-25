@@ -6,7 +6,7 @@ import type { ChatMode } from '@/types';
 
 interface ChatInput {
   repositoryId: string;
-  vpsConnectionId: string;
+  agentId: string;
   serviceName: string;
   selectedFile?: string | null;
   message: string;
@@ -15,7 +15,13 @@ interface ChatInput {
 
 interface ChatResponse {
   reply: string;
-  contextUsed: { service: string; file?: string };
+  contextUsed: {
+    service: string;
+    file?: string;
+    logLineCount: number;
+    fileCount: number;
+    commitCount: number;
+  };
 }
 
 export function useChatMutation() {
